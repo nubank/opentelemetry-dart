@@ -28,7 +28,10 @@ class Tracer implements api.Tracer {
       api.SpanKind kind,
       List<api.Attribute> attributes,
       List<api.SpanLink> links,
-      Int64 startTime}) {
+      Int64 startTime,
+      String customParentSpanId,
+      String customParentTraceId,
+      String customParentState}) {
     context ??= api.Context.current;
 
     // If a valid, active Span is present in the context, use it as this Span's
@@ -42,13 +45,25 @@ class Tracer implements api.Tracer {
     api.SpanId parentSpanId;
 
     if (parent != null) {
-      parentSpanId = parent.spanContext.spanId;
-      traceId = parent.spanContext.traceId;
-      traceState = parent.spanContext.traceState;
+      parentSpanId = customParentSpanId != null
+          ? api.SpanId.fromString(customParentSpanId)
+          : parent.spanContext.spanId;
+      traceId = customParentTraceId != null
+          ? api.TraceId.fromString(customParentTraceId)
+          : parent.spanContext.traceId;
+      traceState = customParentState != null
+          ? sdk.TraceState.fromString(customParentState)
+          : parent.spanContext.traceState;
     } else {
-      parentSpanId = api.SpanId.root();
-      traceId = api.TraceId.fromIdGenerator(_idGenerator);
-      traceState = sdk.TraceState.empty();
+      parentSpanId = customParentSpanId != null
+          ? api.SpanId.fromString(customParentSpanId)
+          : api.SpanId.root();
+      traceId = customParentTraceId != null
+          ? api.TraceId.fromString(customParentTraceId)
+          : api.TraceId.fromIdGenerator(_idGenerator);
+      traceState = customParentState != null
+          ? sdk.TraceState.fromString(customParentState)
+          : sdk.TraceState.empty();
     }
 
     final samplerResult =

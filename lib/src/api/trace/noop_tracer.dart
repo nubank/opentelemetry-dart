@@ -15,7 +15,10 @@ class NoopTracer implements api.Tracer {
       api.SpanKind kind,
       List<api.Attribute> attributes,
       List<api.SpanLink> links,
-      Int64 startTime}) {
+      Int64 startTime,
+      String customParentSpanId,
+      String customParentTraceId,
+      String customParentState}) {
     final parentContext = context.spanContext;
 
     return api.NonRecordingSpan(
