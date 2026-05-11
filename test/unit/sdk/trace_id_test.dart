@@ -52,4 +52,18 @@ void main() {
     expect(testTraceId.isValid, isFalse);
     expect(testTraceId.toString(), equals('00000000000000000000000000000000'));
   });
+
+  test('create from oversized string truncates to rightmost 32 chars', () {
+    // Simulates a non-compliant 48-char trace ID produced by a buggy Envoy build
+    // (RT-806: 24-byte trace ID encoded as 48 hex chars instead of the required 16 bytes / 32 chars).
+    // The rightmost 32 chars are kept to preserve the most-significant random bits
+    // that were intended as the 16-byte trace ID.
+    const oversized = 'f38ef66b9eda7b5df8e7971cdfd7b5ddbd5cef7775d7977b'; // 48 chars
+    final testTraceId = api.TraceId.fromString(oversized);
+
+    expect(testTraceId.toString(), equals('f8e7971cdfd7b5ddbd5cef7775d7977b'));
+    expect(testTraceId.toString().length, equals(32));
+    expect(testTraceId.get().length, equals(16));
+    expect(testTraceId.isValid, isTrue);
+  });
 }

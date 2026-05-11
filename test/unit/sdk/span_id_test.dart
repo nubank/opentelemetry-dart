@@ -57,4 +57,16 @@ void main() {
     expect(testSpanId.isValid, true);
     expect(testSpanId.toString(), equals(''));
   });
+
+  test('create from oversized string truncates to rightmost 16 chars', () {
+    // Simulates a non-compliant 24-char span ID produced by a buggy Envoy build
+    // (RT-806: 12-byte span ID encoded as 24 hex chars instead of the required 8 bytes / 16 chars).
+    const oversized = 'df6d1c6ddf796dfe356b4ef7'; // 24 chars
+    final testSpanId = api.SpanId.fromString(oversized);
+
+    expect(testSpanId.toString(), equals('df796dfe356b4ef7'));
+    expect(testSpanId.toString().length, equals(16));
+    expect(testSpanId.get().length, equals(8));
+    expect(testSpanId.isValid, isTrue);
+  });
 }
