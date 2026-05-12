@@ -236,4 +236,51 @@ void main() {
 
     expect(parentHeaderMatch, isNull);
   });
+
+  // Envoy (Istio sidecar) generates oversized IDs: 48-char trace IDs and
+  // 24-char span IDs.  The propagator must accept and truncate them.
+  test('header regex, oversized trace and parent IDs (Envoy/Istio)', () {
+    // 16 extra leading zeros prepended to a valid 32-char trace ID = 48 chars
+    // 8 extra leading zeros prepended to a valid 16-char span ID = 24 chars
+    const traceParentHeader =
+        '00-00000000000000004bf92f3577b34da6a3ce929d0e0e4736-0000000000f067aa0ba902b7-01';
+    final parentHeaderMatch = api
+        .W3CTraceContextPropagator.traceParentHeaderRegEx
+        .firstMatch(traceParentHeader);
+
+    expect(parentHeaderMatch, isNotNull);
+    final fields = Map<String, String>.fromIterable(
+        parentHeaderMatch.groupNames,
+        key: (element) => element.toString(),
+        value: (element) => parentHeaderMatch.namedGroup(element));
+
+    expect(fields['traceid'],
+        equals('00000000000000004bf92f3577b34da6a3ce929d0e0e4736'));
+    expect(fields['parentid'], equals('0000000000f067aa0ba902b7'));
+  });
+
+  test('extract oversized trace context (Envoy/Istio)', () {
+    final testPropagator = api.W3CTraceContextPropagator();
+    final testCarrier = {};
+
+    // Envoy sidecar (Istio) emits 48-char trace IDs and 24-char span IDs.
+    // The propagator should accept the header and truncate to the rightmost
+    // 32 (trace) / 16 (span) hex characters.
+    TestingInjector()
+      ..set(testCarrier, 'traceparent',
+          '00-00000000000000004bf92f3577b34da6a3ce929d0e0e4736-0000000000f067aa0ba902b7-01');
+    final resultContext = testPropagator.extract(
+        api.Context.current, testCarrier, TestingExtractor());
+    final resultSpan = resultContext.span;
+
+    expect(resultSpan.spanContext.isValid, isTrue);
+    // Rightmost 32 chars of the 48-char trace ID
+    expect(resultSpan.spanContext.traceId.toString(),
+        equals('4bf92f3577b34da6a3ce929d0e0e4736'));
+    // Rightmost 16 chars of the 24-char span ID
+    expect(
+        resultSpan.spanContext.spanId.toString(), equals('00f067aa0ba902b7'));
+    expect(resultSpan.spanContext.traceFlags & api.TraceFlags.sampled,
+        equals(api.TraceFlags.sampled));
+  });
 }

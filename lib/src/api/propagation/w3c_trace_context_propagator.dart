@@ -16,8 +16,8 @@ class W3CTraceContextPropagator implements api.TextMapPropagator {
   // for trace parent header specification.
   static final RegExp traceParentHeaderRegEx =
       RegExp('^(?<$_traceVersionFieldKey>[0-9a-f]{2})-'
-          '(?<$_traceIdFieldKey>[0-9a-f]{${api.TraceId.sizeBits}})-'
-          '(?<$_parentIdFieldKey>[0-9a-f]{${api.SpanId.sizeBits}})-'
+          '(?<$_traceIdFieldKey>[0-9a-f]{${api.TraceId.sizeBits},})-'
+          '(?<$_parentIdFieldKey>[0-9a-f]{${api.SpanId.sizeBits},})-'
           '(?<$_traceFlagsFieldKey>[0-9a-f]{${2}})\$');
 
   @override
